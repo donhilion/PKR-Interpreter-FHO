@@ -1,7 +1,7 @@
 from functools import reduce
 from re import VERBOSE
 from funcparserlib.lexer import make_tokenizer, Token
-from funcparserlib.parser import some, with_forward_decls, many, a, skip
+from funcparserlib.parser import some, with_forward_decls, many, a, skip, maybe
 
 __author__ = 'Donhilion'
 
@@ -165,6 +165,26 @@ class Let(Leave):
     def __str__(self):
         return "Let(%s,%s)" % (str(self.decls), str(self.exp))
 
+class If(Leave):
+
+    def __init__(self, cond, the, els):
+        self.cond = cond
+        self.the = the
+        self.els = els
+
+    def eval(self, env):
+        cond = self.cond.eval(env)
+        if cond == UNDEFINED:
+            return UNDEFINED
+        if cond:
+            return self.the.eval(env)
+        if self.els != None:
+            return self.els.eval(env)
+        return UNDEFINED
+
+    def __str__(self):
+        return "If(%s then %s else %s)" % (str(self.cond), str(self.the), str(self.els))
+
 def tokenize(str):
     """Returns tokens of the given string."""
     specs = [
@@ -213,14 +233,15 @@ def parse(seq):
     operation = add | sub | mul | div
 
     decl = with_forward_decls(lambda:toktype('Var') + op_('=') + exp >> tup)
-    decls = decl + many(skip(toktype('Semicolon') + decl)) >> lst
+    decls = decl + many(skip(toktype('Semicolon')) + decl) >> lst
     e = toktype('Var') >> Variable | toktype('Number') >> (lambda x: Const(int(x))) |\
         toktype('True') >> (lambda x: Const(True)) | toktype('False') >> (lambda x: Const(False))
     exp = with_forward_decls(lambda:e + many(operation + e) >> unarg(eval_expr) |\
-        skip(toktype('Let')) + decls + skip(toktype('In')) + exp + skip(toktype('End')) >> unarg(Let))
+        skip(toktype('Let')) + decls + skip(toktype('In')) + exp + skip(toktype('End')) >> unarg(Let) |\
+        skip(toktype('If')) + exp + skip(toktype('Then')) + exp + maybe(skip(toktype('Else')) + exp) + skip(toktype('Fi')) >> unarg(If))
 
     return exp.parse(seq)
 
-parsed = parse(tokenize("let x=3-1 in 1+x*3 end"))
+parsed = parse(tokenize("let x=3-1;y=true in if y then 1+x*3 fi end"))
 print(parsed)
 print(parsed.eval({}))
