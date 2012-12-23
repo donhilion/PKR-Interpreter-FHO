@@ -41,7 +41,7 @@ class Const(Leave):
         return "Const(%s)" % str(self.value)
 
 class Add(Leave):
-    
+
     def __init__(self, left, right):
         self.left = left
         self.right = right
@@ -181,7 +181,7 @@ class If(Leave):
             return UNDEFINED
         if cond:
             return self.the.eval(env)
-        if self.els != None:
+        if self.els is not None:
             return self.els.eval(env)
         return UNDEFINED
 
@@ -221,8 +221,24 @@ class Call(Leave):
     def __str__(self):
         return "Call(%s (%s))" % (str(self.fun), str(self.args))
 
+class Prog(Leave):
+
+    def __init__(self, exp):
+        self.exp = exp
+
+    def eval(self, env):
+        return self.exp.eval(env)
+
+    def __str__(self):
+        return "Prog(%s)" % str(self.exp)
+
+    def run(self):
+        return self.eval({})
+
 def tokenize(str):
-    """Returns tokens of the given string."""
+    """
+    Generates a list of tokens from the given string.
+    """
     specs = [
         ('Space',		(r'[ \t\r\n]+',)),
         ('True',		('true',)),
@@ -240,6 +256,7 @@ def tokenize(str):
         ('End', 		('end',)),
         ('Fun', 		('fun',)),
         ('Arrow', 		('=>',)),
+        ('Prog',    	('prog',)),
         ('Op',          (r'[\-+/*=<>]',)),
         ('Var', 		(r'[A-Za-z][A-Za-z_0-9]*',)),
         ('Number',      (r'(0|([1-9][0-9]*))', VERBOSE)),
@@ -250,6 +267,9 @@ def tokenize(str):
     return [x for x in t(str) if x.type not in useless]
 
 def parse(seq):
+    """
+    Parses the list of tokens and generates an AST.
+    """
     def eval_expr(z, list):
         return reduce(lambda s, (f, x): f(s, x), list, z)
     unarg = lambda f: lambda x: f(*x)
@@ -286,11 +306,10 @@ def parse(seq):
         fun | call)
     exp = ex + op_('<') + ex >> unarg(Lt) | ex + op_('>') + ex >> unarg(Gt) | ex + op_('=') + ex >> unarg(Eq) |\
         ex + many(operation + ex) >> unarg(eval_expr)
+    prog = skip(toktype('Prog')) + exp >> Prog
 
-    return exp.parse(seq)
+    return prog.parse(seq)
 
-#parsed = parse(tokenize("let f1 = fun a b c => if a then 1+b*c fi end in call f1(false,2,3) end"))
-#parsed = parse(tokenize("let y=fun a => a * 2 end in call y(1) end"))
-parsed = parse(tokenize("let fac=fun a => if a>0 then a*call fac(a-1) else 1 fi end in call fac(4) end"))
+parsed = parse(tokenize("prog let fac=fun a => if a>0 then a*call fac(a-1) else 1 fi end in call fac(4) end"))
 print(parsed)
-print(parsed.eval({}))
+print(parsed.run())
