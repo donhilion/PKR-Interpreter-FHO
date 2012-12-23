@@ -23,6 +23,9 @@ class Variable(Leave):
             return UNDEFINED
         return env[self.name]
 
+    def get_name(self):
+        return self.name
+
     def __str__(self):
         return "Variable(%s)" % self.name
 
@@ -185,6 +188,39 @@ class If(Leave):
     def __str__(self):
         return "If(%s then %s else %s)" % (str(self.cond), str(self.the), str(self.els))
 
+class Fun(Leave):
+
+    def __init__(self, vars, exp):
+        self.vars = vars
+        self.exp = exp
+
+    def eval(self, env):
+        return self
+
+    def call(self, env, args):
+        if len(args) < len(self.vars):
+            return UNDEFINED
+        tuples = zip(self.vars, args)
+        env_new = env.copy()
+        for tup in tuples:
+            env_new[tup[0].get_name()] = tup[1].eval(env_new)
+        return self.exp.eval(env_new)
+
+    def __str__(self):
+        return "Fun(%s => %s)" % (str(self.vars), str(self.exp))
+
+class Call(Leave):
+
+    def __init__(self, fun, args):
+        self.fun = fun
+        self.args = args
+
+    def eval(self, env):
+        return self.fun.eval(env).call(env, self.args)
+
+    def __str__(self):
+        return "Call(%s (%s))" % (str(self.fun), str(self.args))
+
 def tokenize(str):
     """Returns tokens of the given string."""
     specs = [
@@ -196,10 +232,14 @@ def tokenize(str):
         ('Else',		('else',)),
         ('Fi',  		('fi',)),
         ('Call',		('call',)),
+        ('Lp',  		('\(',)),
+        ('Comma',  		(',',)),
+        ('Rp',  		('\)',)),
         ('Let', 		('let',)),
         ('In',  		('in',)),
         ('End', 		('end',)),
         ('Fun', 		('fun',)),
+        ('Arrow', 		('=>',)),
         ('Op',          (r'[\-+/*=<>]',)),
         ('Var', 		(r'[A-Za-z][A-Za-z_0-9]*',)),
         ('Number',      (r'(0|([1-9][0-9]*))', VERBOSE)),
@@ -232,16 +272,25 @@ def parse(seq):
 
     operation = add | sub | mul | div
 
-    decl = with_forward_decls(lambda:toktype('Var') + op_('=') + exp >> tup)
+    decl = with_forward_decls(lambda:toktype('Var') + op_('=') + (exp | fun) >> tup)
     decls = decl + many(skip(toktype('Semicolon')) + decl) >> lst
-    e = toktype('Var') >> Variable | toktype('Number') >> (lambda x: Const(int(x))) |\
-        toktype('True') >> (lambda x: Const(True)) | toktype('False') >> (lambda x: Const(False))
-    exp = with_forward_decls(lambda:e + many(operation + e) >> unarg(eval_expr) |\
+    variable = toktype('Var') >> Variable
+    variables = variable + many(variable) >> lst
+    fun = with_forward_decls(lambda: skip(toktype('Fun')) + variables + skip(toktype('Arrow')) + exp + skip(toktype('End'))) >> unarg(Fun)
+    parameters = with_forward_decls(lambda: exp + many(skip(toktype('Comma')) + exp) >> lst)
+    call = skip(toktype('Call')) + (fun | variable) + skip(toktype('Lp')) + parameters + skip(toktype('Rp')) >> unarg(Call)
+    ex = with_forward_decls(lambda:variable | toktype('Number') >> (lambda x: Const(int(x))) |\
+        toktype('True') >> (lambda x: Const(True)) | toktype('False') >> (lambda x: Const(False)) |\
         skip(toktype('Let')) + decls + skip(toktype('In')) + exp + skip(toktype('End')) >> unarg(Let) |\
-        skip(toktype('If')) + exp + skip(toktype('Then')) + exp + maybe(skip(toktype('Else')) + exp) + skip(toktype('Fi')) >> unarg(If))
+        skip(toktype('If')) + exp + skip(toktype('Then')) + exp + maybe(skip(toktype('Else')) + exp) + skip(toktype('Fi')) >> unarg(If) |\
+        fun | call)
+    exp = ex + op_('<') + ex >> unarg(Lt) | ex + op_('>') + ex >> unarg(Gt) | ex + op_('=') + ex >> unarg(Eq) |\
+        ex + many(operation + ex) >> unarg(eval_expr)
 
     return exp.parse(seq)
 
-parsed = parse(tokenize("let x=3-1;y=true in if y then 1+x*3 fi end"))
+#parsed = parse(tokenize("let f1 = fun a b c => if a then 1+b*c fi end in call f1(false,2,3) end"))
+#parsed = parse(tokenize("let y=fun a => a * 2 end in call y(1) end"))
+parsed = parse(tokenize("let fac=fun a => if a>0 then a*call fac(a-1) else 1 fi end in call fac(4) end"))
 print(parsed)
 print(parsed.eval({}))
