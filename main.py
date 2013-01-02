@@ -290,7 +290,11 @@ def parse(seq):
     mul = makeop('*', Mul)
     div = makeop('/', Div)
 
-    operation = add | sub | mul | div
+    lt = makeop('<', Lt)
+    gt = makeop('>', Gt)
+    eq = makeop('=', Eq)
+
+    operation = add | sub | mul | div | lt | gt | eq
 
     decl = with_forward_decls(lambda:toktype('Var') + op_('=') + (exp | fun) >> tup)
     decls = decl + many(skip(toktype('Semicolon')) + decl) >> lst
@@ -304,8 +308,7 @@ def parse(seq):
         skip(toktype('Let')) + decls + skip(toktype('In')) + exp + skip(toktype('End')) >> unarg(Let) |\
         skip(toktype('If')) + exp + skip(toktype('Then')) + exp + maybe(skip(toktype('Else')) + exp) + skip(toktype('Fi')) >> unarg(If) |\
         fun | call)
-    exp = ex + op_('<') + ex >> unarg(Lt) | ex + op_('>') + ex >> unarg(Gt) | ex + op_('=') + ex >> unarg(Eq) |\
-        ex + many(operation + ex) >> unarg(eval_expr)
+    exp = ex + many(operation + ex) >> unarg(eval_expr)
     prog = skip(toktype('Prog')) + exp >> Prog
 
     return prog.parse(seq)
