@@ -2,6 +2,7 @@ from functools import reduce
 from re import VERBOSE
 from funcparserlib.lexer import make_tokenizer, Token
 from funcparserlib.parser import some, with_forward_decls, many, a, skip, maybe
+import programs
 
 __author__ = 'Donhilion'
 
@@ -313,6 +314,10 @@ def parse(seq):
 
     return prog.parse(seq)
 
-parsed = parse(tokenize("prog let fac=fun a => if a>0 then a*call fac(a-1) else 1 fi end in call fac(4) end"))
+parsed = parse(tokenize(programs.factorial))
+print(parsed)
+print(parsed.run())
+
+parsed = parse(tokenize(programs.fibonacci))
 print(parsed)
 print(parsed.run())
