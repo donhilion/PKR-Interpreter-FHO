@@ -217,7 +217,10 @@ class Call(Leave):
         self.args = args
 
     def eval(self, env):
-        return self.fun.eval(env).call(env, self.args)
+        fun = self.fun.eval(env)
+        if fun is UNDEFINED:
+            return UNDEFINED
+        return fun.call(env, self.args)
 
     def __str__(self):
         return "Call(%s (%s))" % (str(self.fun), str(self.args))
@@ -319,5 +322,9 @@ print(parsed)
 print(parsed.run())
 
 parsed = parse(tokenize(programs.fibonacci))
+print(parsed)
+print(parsed.run())
+
+parsed = parse(tokenize(programs.square))
 print(parsed)
 print(parsed.run())
