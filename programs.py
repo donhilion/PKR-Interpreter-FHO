@@ -37,3 +37,16 @@ prog
         call f(5)
 end
 """
+
+square = """
+prog
+    let
+        square=fun
+            z
+            =>
+                z*z
+            end
+    in
+        call square(4)
+end
+"""
