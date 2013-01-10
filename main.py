@@ -71,7 +71,7 @@ class Sub(Leave):
         return l - r
 
     def __str__(self):
-        return "Sub(%s,%s)" % str(self.left), str(self.right)
+        return "Sub(%s,%s)" % (str(self.left), str(self.right))
 
 class Mul(Leave):
 
@@ -167,7 +167,10 @@ class Let(Leave):
         return self.exp.eval(env_new)
 
     def __str__(self):
-        return "Let(%s,%s)" % (str(self.decls), str(self.exp))
+        decls = ""
+        for decl in self.decls:
+            decls += "%s = %s," % (str(decl[0]), str(decl[1]))
+        return "Let(%s,%s)" % (decls[:-1], str(self.exp))
 
 class If(Leave):
 
@@ -208,7 +211,10 @@ class Fun(Leave):
         return self.exp.eval(env_new)
 
     def __str__(self):
-        return "Fun(%s => %s)" % (str(self.vars), str(self.exp))
+        vars = ""
+        for var in self.vars:
+            vars += "%s," % (str(var),)
+        return "Fun(%s => %s)" % (vars[:-1], str(self.exp))
 
 class Call(Leave):
 
@@ -223,7 +229,10 @@ class Call(Leave):
         return fun.call(env, self.args)
 
     def __str__(self):
-        return "Call(%s (%s))" % (str(self.fun), str(self.args))
+        args = ""
+        for arg in self.args:
+            args += "%s," % (str(arg),)
+        return "Call(%s (%s))" % (str(self.fun), args[:-1])
 
 class Prog(Leave):
 
