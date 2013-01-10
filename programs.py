@@ -50,3 +50,27 @@ prog
         call square(4)
 end
 """
+
+exp = """
+prog
+    let
+        exp=fun
+            a, b
+            =>
+                call expRek(a,b,1)
+            end;
+        expRek=fun
+            a, b, erg
+            =>
+                if
+                    b < 1
+                then
+                    erg
+                else
+                    call expRek(a,b-1,erg*a)
+                fi
+            end
+    in
+        call exp(2,10)
+end
+"""

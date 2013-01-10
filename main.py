@@ -303,7 +303,7 @@ def parse(seq):
     decl = with_forward_decls(lambda:toktype('Var') + op_('=') + (exp | fun) >> tup)
     decls = decl + many(skip(toktype('Semicolon')) + decl) >> lst
     variable = toktype('Var') >> Variable
-    variables = variable + many(variable) >> lst
+    variables = variable + many(skip(toktype('Comma')) + variable) >> lst
     fun = with_forward_decls(lambda: skip(toktype('Fun')) + variables + skip(toktype('Arrow')) + exp + skip(toktype('End'))) >> unarg(Fun)
     parameters = with_forward_decls(lambda: exp + many(skip(toktype('Comma')) + exp) >> lst)
     call = skip(toktype('Call')) + (fun | variable) + skip(toktype('Lp')) + parameters + skip(toktype('Rp')) >> unarg(Call)
@@ -326,5 +326,9 @@ print(parsed)
 print(parsed.run())
 
 parsed = parse(tokenize(programs.square))
+print(parsed)
+print(parsed.run())
+
+parsed = parse(tokenize(programs.exp))
 print(parsed)
 print(parsed.run())
