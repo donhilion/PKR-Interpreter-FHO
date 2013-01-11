@@ -101,7 +101,7 @@ class Div(Leave):
         r = self.right.eval(env)
         if r == UNDEFINED: return UNDEFINED
         if r == 0: return UNDEFINED
-        return l / r
+        return int(l / r)
 
     def __str__(self):
         return "Div(%s,%s)" % (str(self.left), str(self.right))
@@ -197,17 +197,20 @@ class Fun(Leave):
     def __init__(self, vars, exp):
         self.vars = vars
         self.exp = exp
+        self.env = None
 
     def eval(self, env):
+        if self.env is None:
+            self.env = env
         return self
 
     def call(self, env, args):
-        if len(args) < len(self.vars):
+        if len(args) != len(self.vars):
             return UNDEFINED
         tuples = zip(self.vars, args)
-        env_new = env.copy()
+        env_new = self.env.copy()
         for tup in tuples:
-            env_new[tup[0].get_name()] = tup[1].eval(env_new)
+            env_new[tup[0].get_name()] = tup[1].eval(env)
         return self.exp.eval(env_new)
 
     def __str__(self):
@@ -339,5 +342,17 @@ print(parsed)
 print(parsed.run())
 
 parsed = parse(tokenize(programs.exp))
+print(parsed)
+print(parsed.run())
+
+parsed = parse(tokenize(programs.vars))
+print(parsed)
+print(parsed.run())
+
+parsed = parse(tokenize(programs.stat))
+print(parsed)
+print(parsed.run())
+
+parsed = parse(tokenize(programs.high))
 print(parsed)
 print(parsed.run())
